@@ -33,7 +33,7 @@ class Pursuer():
         return s_dot
     
     @property
-    def get_position(self):
+    def position(self):
         return self.state[0], self.state[1]
     
 class Evader():
@@ -63,7 +63,7 @@ class Evader():
         s_dot[2] = 0 # sum of F_a and F_r (attraction force (vector pointing towards center of area), repulsive force (vector pointing away from pursuer))
     
     @property
-    def get_position(self):
+    def position(self):
         return self.state[0], self.state[1]
        
    
