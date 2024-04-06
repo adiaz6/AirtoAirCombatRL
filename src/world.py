@@ -24,19 +24,18 @@ class World(object):
         self.k = 1 # distance reward scaling factor
 
         self.dt = dt # time step
-
-        # Each action choice is [linear_accel_control, angular_accel_control]
-        self.action_space = { 0: [0, 0],            # [0 linear accel, 0 angular accel] 
-                              1: [0, u2_max],       # [0 linear accel, max angular accel]
-                              2: [0, -u2_max],      # [0 linear accel, -max angular accel]
-                              3: [u1_max, 0],       # [max linear accel, 0 angular accel]
-                              4: [u1_max, u2_max],  # [max linear accel, max angular accel]
-                              5: [u1_max, -u2_max], # [max linear accel, -max angular accel]
-                              6: [-u1_max, 0],      # [-max linear accel, 0 angular accel]
-                              7: [-u1_max, u2_max],   # [-max linear accel, max angular accel]
-                              8: [-u1_max, -u2_max] } # [-max linear accel, -max angular accel]
         
-        self.possible_actions = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+        # Each action choice is [linear_accel_control, angular_accel_control]
+        self.action_space = np.array([[0, 0],       # [0 linear accel, 0 angular accel]
+                                      [0, u2_max],  # [0 linear accel, max angular accel]
+                                      [0, -u2_max], # [0 linear accel, -max angular accel]
+                                      [u1_max, 0],  # [max linear accel, 0 angular accel]
+                                      [u1_max, u2_max],  # [max linear accel, max angular accel]
+                                      [u1_max, -u2_max], # [max linear accel, -max angular accel]
+                                      [-u1_max, 0],      # [-max linear accel, 0 angular accel]
+                                      [-u1_max, u2_max],   # [-max linear accel, max angular accel]
+                                      [-u1_max, -u2_max]]) # [-max linear accel, -max angular accel]
+        
         self.pursuer = Pursuer(start_state_pursuer, v_min, v_max, u1_max, u2_max)
         self.evader = Evader(start_state_evader, v_min, v_max, u1_max, u2_max)
 
@@ -55,12 +54,12 @@ class World(object):
     
     # Check if pursuer has reached evader
     @property
-    def pursuer_succeeds(self):
+    def pursuer_succeeded(self):
         return self.distance_pe <= self.d
 
     # Check if evader has reached target area
     @property
-    def evader_succeeds(self):
+    def evader_succeeded(self):
         return self.distance_et <= self.area_r
     
     # Check if evader has been chased beyond target area (outside of boundaries)
@@ -72,12 +71,23 @@ class World(object):
     # Check if state is terminal
     @property
     def is_terminal(self):
-        return self.pursuer_succeeds or self.evader_succeeds or self.evader_cornered
+        return self.pursuer_succeeded or self.evader_succeeded or self.evader_cornered
     
     # Get pursuer state
     @property
-    def state(self):
+    def p_state(self):
         return self.pursuer.state
+    
+   # Get evader state
+    @property
+    def e_state(self):
+        return self.evader.state
+    
+    # Get feature vector
+    # This is of form [p_x, p_y, p_v, p_theta, e_x, e_y, e_v, evader_distance_to_target_area]
+    @property
+    def state(self):
+        return np.concatenate(self.p_state, self.e_state, self.distance_et)
     
     # Get reward
     def get_reward(self, dtm1):
@@ -99,7 +109,7 @@ class World(object):
         self.pursuer.update_state(self.action_space[action])
         self.evader.update_state()  
 
-        return self.pursuer.state, self.get_reward(dtm1), self.is_terminal, None
+        return self.state, self.get_reward(dtm1), self.is_terminal, None
     
     # Initialize everything randomly
     def reset(self):
