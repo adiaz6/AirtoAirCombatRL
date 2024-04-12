@@ -9,7 +9,7 @@ class Pursuer():
 
         self.dt = dt # Time step
 
-        self.state = state
+        self.state = state # [x, y, v, theta]
 
     def update_state(self, a):
         # Integration step
@@ -18,7 +18,6 @@ class Pursuer():
         state = np.zeros(4) # [x, y, v, theta]
 
         # Integrate dynamics here
-        xkp1 = xk + dt * v
         # Check for limits
 
         # Update current state

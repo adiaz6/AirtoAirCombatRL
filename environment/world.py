@@ -6,7 +6,7 @@ import os
 import pygame
 
 class World(object):
-    def __init__(self, area_x, area_y, area_r,
+    def __init__(self,
                  vp_min=0, vp_max=1.2, u1_max=0.3, u2_max=0.8, 
                  ve_min=0, ve_max=1.2, ae_max=0.3, ave_max=0.8,
                  x_l=0, x_u=10, y_l=0, y_u=10, d=0.3, dt=0.1, k=0.1
@@ -16,15 +16,24 @@ class World(object):
         self.y_l = y_l # y lower limit
         self.y_u = y_u # y upper limit
         
-        self.area_x = area_x # x-coordinates of target area
-        self.area_y = area_y # y-coordinates of target area
-        self.area_r = area_r # radius of target area
+        self.area_r = (self.x_u - self.x_l) / 24 # radius of target area
+        self.area_y = (self.y_u - self.y_l) / 2
+        self.area_x = 5 * (self.x_u - self.x_l) / 6
 
         self.d = d # capture distance
 
         self.k = k # distance reward scaling factor
 
         self.dt = dt # time step
+
+        self.vp_min = vp_min
+        self.vp_max = vp_max
+        self.u1_max = u1_max
+        self.u2_max = u2_max
+        self.ve_min = ve_min
+        self.ve_max = ve_max
+        self.ae_max = ae_max
+        self.ave_max = ave_max
         
         # Each action choice is [linear_accel_control, angular_accel_control]
         self.action_space = np.array([[0, 0],       # [0 linear accel, 0 angular accel]
@@ -37,9 +46,6 @@ class World(object):
                                       [-u1_max, u2_max],   # [-max linear accel, max angular accel]
                                       [-u1_max, -u2_max]]) # [-max linear accel, -max angular accel]
         
-        self.pursuer = Pursuer(self.start_state_pursuer, vp_min, vp_max, u1_max, u2_max)
-        self.evader = Evader(self.start_state_evader, ve_min, ve_max, ae_max, ave_max)
-
         # For pygame rendering
         self.scale_x = 600 / (x_u - x_l)
         self.scale_y = 600 / (y_u - y_l)
@@ -118,13 +124,13 @@ class World(object):
 
         return self.state, reward, self.is_terminal, info
     
-    # Initialize everything randomly
+    # Initialize everything
     def reset(self):
-        self.start_state_evader = 0
-        self.start_state_pursuer = 0
-        self.area_r = 0
-        self.area_x = 0
-        self.area_y = 0
+        pursuer_state = [self.x_l + (self.x_u - self.x_l)/10, self.y_l + (self.y_u - self.y_l)/10, 0.0, 0.0]
+        evader_state = [self.x_l + (self.x_u - self.x_l)/10, self.y_u - (self.y_u - self.y_l)/10, 0.0, 0.0]
+
+        self.pursuer = Pursuer(pursuer_state, self.vp_min, self.vp_max, self.u1_max, self.u2_max)
+        self.evader = Evader(evader_state, self.ve_min, self.ve_max, self.ae_max, self.ave_max)
 
     # Render 
     def render(self):
@@ -149,10 +155,10 @@ class World(object):
                     is_running = False
 
             window_surface.blit(bg, (0, 0))
-            radius = self.area_r * self.x_scale
+            radius = self.r * self.x_scale
 
             circle = pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
             pygame.draw.circle(circle, (255, 0, 0, 80), (radius, radius), radius)
-            window_surface.blit(circle, (self.x_scale * (self.area_x - self.x_l), 600 - self.y_scale * (self.area_y - self.y_l)))
+            window_surface.blit(circle, ((self.scale_x * (self.area_x - self.x_l) - radius), (600 - self.scale_y * (self.area_y - self.y_l)) - radius))
             all_sprites.draw(window_surface)
             pygame.display.update()
