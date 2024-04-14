@@ -39,8 +39,12 @@ class Pursuer():
     def position(self):
         return self.state[0], self.state[1]
     
+    @property
+    def angle(self):
+        return self.state[3]
+    
 class Evader(Pursuer):
-    def __init__(self, state, v_min, v_max, u1_max, u2_max, ka, kr, dt):
+    def __init__(self, state, v_min, v_max, u1_max, u2_max, dt, ka=0, kr=0):
         self.v_min = v_min
         self.v_max = v_max
         self.u1_max = u1_max
@@ -62,7 +66,7 @@ class Evader(Pursuer):
     def dynamics(self, s, area_loc, pursuer_loc):
         # area_loc = [x_coord, y_coord] (location of target area)
         # pursuer_loc = [x_coord, y_coord] (current location of pursuer)
-        s_dot = np.zeros(3) # [x_dot, y_dot, v_dot]
+        s_dot = np.zeros(4) # [x_dot, y_dot, vx_dot, vy_dot]
 
         s_dot[0] = 0
         s_dot[1] = 0
@@ -73,5 +77,8 @@ class Evader(Pursuer):
     def position(self):
         return self.state[0], self.state[1]
 
+    @property
+    def angle(self):
+        return np.degrees(np.arctan2(self.state[3], self.state[2]))
         
         

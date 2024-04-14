@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from agent import Pursuer, Evader
-from player import Player
+from environment.agent import Pursuer, Evader
+from environment.player import Player
 import os
 import pygame
 
@@ -9,14 +9,13 @@ class World(object):
     def __init__(self,
                  vp_min=0, vp_max=1.2, u1_max=0.3, u2_max=0.8, 
                  ve_min=0, ve_max=1.2, ae_max=0.3, ave_max=0.8,
-                 x_l=0, x_u=10, y_l=0, y_u=10, d=0.3, dt=0.1, k=0.1
-                 ):
+                 x_l=0, x_u=10, y_l=0, y_u=10, d=0.3, dt=0.1, k=0.1):
         self.x_l = x_l # x lower limit
         self.x_u = x_u # x upper limit
         self.y_l = y_l # y lower limit
         self.y_u = y_u # y upper limit
         
-        self.area_r = (self.x_u - self.x_l) / 24 # radius of target area
+        self.area_r = (self.x_u - self.x_l) / 12 # radius of target area
         self.area_y = (self.y_u - self.y_l) / 2
         self.area_x = 5 * (self.x_u - self.x_l) / 6
 
@@ -50,6 +49,8 @@ class World(object):
         self.scale_x = 600 / (x_u - x_l)
         self.scale_y = 600 / (y_u - y_l)
 
+        self.initialized = False 
+
     # Distance between pursuer and evader
     @property
     def distance_pe(self):
@@ -76,7 +77,7 @@ class World(object):
     # Check if evader has been chased beyond target area (outside of boundaries)
     @property
     def evader_cornered(self):
-        x, y = self.evader.get_position
+        x, y = self.evader.position
         return x >= self.x_u or x <= self.x_l or y >= self.y_u or y <= self.y_l
 
     # Check if state is terminal
@@ -98,7 +99,7 @@ class World(object):
     # This is of form [p_x, p_y, p_v, p_theta, e_x, e_y, e_v, evader_distance_to_target_area]
     @property
     def state(self):
-        return np.concatenate(self.p_state, self.e_state, self.distance_et)
+        return np.concatenate((self.p_state, self.e_state, np.array([self.distance_et])))
     
     # Get reward
     def get_reward(self, dtm1):
@@ -116,9 +117,15 @@ class World(object):
     # Take a step according to some action
     # Return new_state, reward, done, info (None)
     def step(self, action):
+        if not self.initialized:
+            raise ValueError("Environment not initialized. Call reset() before calling step().")
+                             
         dtm1 = self.distance_pe
         self.pursuer.update_state(self.action_space[action])
         self.evader.update_state()  
+
+        self.pursuer_sprite.update([self.pursuer.position[0], self.pursuer.position[1]], self.pursuer.angle)
+        self.evader_sprite.update([self.evader.position[0], self.evader.position[1]], self.evader.angle)
 
         reward, info = self.get_reward(dtm1)
 
@@ -126,39 +133,38 @@ class World(object):
     
     # Initialize everything
     def reset(self):
+        self.initialized = True
+
         pursuer_state = [self.x_l + (self.x_u - self.x_l)/10, self.y_l + (self.y_u - self.y_l)/10, 0.0, 0.0]
         evader_state = [self.x_l + (self.x_u - self.x_l)/10, self.y_u - (self.y_u - self.y_l)/10, 0.0, 0.0]
 
-        self.pursuer = Pursuer(pursuer_state, self.vp_min, self.vp_max, self.u1_max, self.u2_max)
-        self.evader = Evader(evader_state, self.ve_min, self.ve_max, self.ae_max, self.ave_max)
+        self.pursuer = Pursuer(pursuer_state, self.x_u, self.x_l, self.y_u, self.y_l, self.vp_min, self.vp_max, self.u1_max, self.u2_max, self.dt)
+        self.evader = Evader(evader_state, self.ve_min, self.ve_max, self.ae_max, self.ave_max, self.dt)
 
-    # Render 
-    def render(self):
+        # Rendering 
+        self.pursuer_sprite = Player(os.path.join('images', 'pursuersprite.png'), [self.pursuer.position[0], self.pursuer.position[1]], self.pursuer.angle, self.scale_x, self.scale_y, self.x_l, self.y_l)
+        self.evader_sprite = Player(os.path.join('images', 'evadersprite.png'), [self.evader.position[0], self.evader.position[1]], self.evader.angle, self.scale_x, self.scale_y, self.x_l, self.y_l)
+        
         pygame.init()
         pygame.display.set_caption('Target Defense Game')
 
-        window_surface = pygame.display.set_mode((600, 600))
+        self.window_surface = pygame.display.set_mode((600, 600))
 
-        bg = pygame.Surface((600, 600))
-        bg.fill(pygame.Color('#c4e6fb'))
+        self.bg = pygame.Surface((600, 600))
+        self.bg.fill(pygame.Color('#c4e6fb'))
 
-        pursuer = Player(os.join('..', 'images', 'pursuersprite.png'))
-        evader = Player(os.join('..', 'images', 'evadersprite.png'))
+        self.all_sprites = pygame.sprite.Group()
+        self.all_sprites.add(self.pursuer_sprite, self.evader_sprite)
 
-        all_sprites = pygame.sprite.Group()
-        all_sprites.add(pursuer, evader)
+        return self.state
 
-        is_running = True
-        while is_running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    is_running = False
+    # Render 
+    def render(self):
+        self.window_surface.blit(self.bg, (0, 0))
+        radius = self.area_r * self.scale_x
 
-            window_surface.blit(bg, (0, 0))
-            radius = self.r * self.x_scale
-
-            circle = pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
-            pygame.draw.circle(circle, (255, 0, 0, 80), (radius, radius), radius)
-            window_surface.blit(circle, ((self.scale_x * (self.area_x - self.x_l) - radius), (600 - self.scale_y * (self.area_y - self.y_l)) - radius))
-            all_sprites.draw(window_surface)
-            pygame.display.update()
+        circle = pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
+        pygame.draw.circle(circle, (255, 0, 0, 80), (radius, radius), radius)
+        self.window_surface.blit(circle, ((self.scale_x * (self.area_x - self.x_l) - radius), (600 - self.scale_y * (self.area_y - self.y_l)) - radius))
+        self.all_sprites.draw(self.window_surface)
+        pygame.display.update()
