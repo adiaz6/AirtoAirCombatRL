@@ -9,7 +9,7 @@ class World(object):
     def __init__(self,
                  vp_min=0, vp_max=1.2, u1_max=0.3, u2_max=0.8, 
                  ve_min=0, ve_max=1.2, ae_max=0.3, ave_max=0.8,
-                 x_l=0, x_u=10, y_l=0, y_u=10, d=0.3, dt=0.1, k=0.1):
+                 x_l=0, x_u=10, y_l=0, y_u=10, d=0.3, dt=0.1, k=0.1, ka=0.1, kr=0.1):
         self.x_l = x_l # x lower limit
         self.x_u = x_u # x upper limit
         self.y_l = y_l # y lower limit
@@ -21,7 +21,9 @@ class World(object):
 
         self.d = d # capture distance
 
-        self.k = k # distance reward scaling factor
+        self.k = k
+        self.ka = ka # distance reward scaling factor
+        self.kr = kr
 
         self.dt = dt # time step
 
@@ -35,15 +37,15 @@ class World(object):
         self.ave_max = ave_max
         
         # Each action choice is [linear_accel_control, angular_accel_control]
-        self.action_space = np.array([[0, 0],       # [0 linear accel, 0 angular accel]
-                                      [0, u2_max],  # [0 linear accel, max angular accel]
-                                      [0, -u2_max], # [0 linear accel, -max angular accel]
-                                      [u1_max, 0],  # [max linear accel, 0 angular accel]
-                                      [u1_max, u2_max],  # [max linear accel, max angular accel]
-                                      [u1_max, -u2_max], # [max linear accel, -max angular accel]
-                                      [-u1_max, 0],      # [-max linear accel, 0 angular accel]
-                                      [-u1_max, u2_max],   # [-max linear accel, max angular accel]
-                                      [-u1_max, -u2_max]]) # [-max linear accel, -max angular accel]
+        self.action_space = np.array([[0, 0],       # [0 linear accel, 0 angular vel]
+                                      [0, u2_max],  # [0 linear accel, max angular vel]
+                                      [0, -u2_max], # [0 linear accel, -max angular vel]
+                                      [u1_max, 0],  # [max linear accel, 0 angular vel]
+                                      [u1_max, u2_max],  # [max linear accel, max angular vel]
+                                      [u1_max, -u2_max], # [max linear accel, -max angular vel]
+                                      [-u1_max, 0],      # [-max linear accel, 0 angular vel]
+                                      [-u1_max, u2_max],   # [-max linear accel, max angular vel]
+                                      [-u1_max, -u2_max]]) # [-max linear accel, -max angular vel]
         
         # For pygame rendering
         self.scale_x = 600 / (x_u - x_l)
@@ -122,7 +124,7 @@ class World(object):
                              
         dtm1 = self.distance_pe
         self.pursuer.update_state(self.action_space[action])
-        self.evader.update_state(np.array([self.pursuer.state[0], self.pursuer.state[1]]))  
+        self.evader.update_state(np.array([self.pursuer.position[0], self.pursuer.position[1]]))  
 
         self.pursuer_sprite.update([self.pursuer.position[0], self.pursuer.position[1]], self.pursuer.angle)
         self.evader_sprite.update([self.evader.position[0], self.evader.position[1]], self.evader.angle)
@@ -139,7 +141,7 @@ class World(object):
         evader_state = [self.x_l + (self.x_u - self.x_l)/10, self.y_u - (self.y_u - self.y_l)/10, 0.0, 0.0]
 
         self.pursuer = Pursuer(pursuer_state, self.x_u, self.x_l, self.y_u, self.y_l, self.vp_min, self.vp_max, self.u1_max, self.u2_max, self.dt)
-        self.evader = Evader(np.array([self.area_x, self.area_y]), evader_state, self.ve_min, self.ve_max, self.ae_max, self.ave_max, self.dt)
+        self.evader = Evader(np.array([self.area_x, self.area_y]), evader_state, self.ve_min, self.ve_max, self.ae_max, self.ave_max, self.dt, self.ka, self.kr)
 
         # Rendering 
         self.pursuer_sprite = Player(os.path.join('images', 'pursuersprite.png'), [self.pursuer.position[0], self.pursuer.position[1]], self.pursuer.angle, self.scale_x, self.scale_y, self.x_l, self.y_l)

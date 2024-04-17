@@ -61,7 +61,7 @@ class Pursuer():
         return self.state[3]
     
 class Evader(Pursuer):
-    def __init__(self, area_loc, state, v_min, v_max, u1_max, u2_max, dt, ka=0, kr=0):
+    def __init__(self, area_loc, state, v_min, v_max, u1_max, u2_max, dt, ka, kr):
         self.v_min = v_min
         self.v_max = v_max
         self.u1_max = u1_max
