@@ -122,7 +122,7 @@ class World(object):
                              
         dtm1 = self.distance_pe
         self.pursuer.update_state(self.action_space[action])
-        self.evader.update_state()  
+        self.evader.update_state(np.array([self.pursuer.state[0], self.pursuer.state[1]]))  
 
         self.pursuer_sprite.update([self.pursuer.position[0], self.pursuer.position[1]], self.pursuer.angle)
         self.evader_sprite.update([self.evader.position[0], self.evader.position[1]], self.evader.angle)
@@ -139,7 +139,7 @@ class World(object):
         evader_state = [self.x_l + (self.x_u - self.x_l)/10, self.y_u - (self.y_u - self.y_l)/10, 0.0, 0.0]
 
         self.pursuer = Pursuer(pursuer_state, self.x_u, self.x_l, self.y_u, self.y_l, self.vp_min, self.vp_max, self.u1_max, self.u2_max, self.dt)
-        self.evader = Evader(evader_state, self.ve_min, self.ve_max, self.ae_max, self.ave_max, self.dt)
+        self.evader = Evader(np.array([self.area_x, self.area_y]), evader_state, self.ve_min, self.ve_max, self.ae_max, self.ave_max, self.dt)
 
         # Rendering 
         self.pursuer_sprite = Player(os.path.join('images', 'pursuersprite.png'), [self.pursuer.position[0], self.pursuer.position[1]], self.pursuer.angle, self.scale_x, self.scale_y, self.x_l, self.y_l)
