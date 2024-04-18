@@ -4,12 +4,13 @@ from environment.agent import Pursuer, Evader
 from environment.player import Player
 import os
 import pygame
+import time
 
 class World(object):
     def __init__(self,
                  vp_min=0, vp_max=1.2, u1_max=0.3, u2_max=0.8, 
                  ve_min=0, ve_max=1.2, ae_max=0.3, ave_max=0.8,
-                 x_l=0, x_u=10, y_l=0, y_u=10, d=0.3, dt=0.1, k=0.1, ka=0.1, kr=0.1):
+                 x_l=0, x_u=10, y_l=0, y_u=10, d=0.3, dt=0.1, k=0.1, ka=0.1, kr=0):
         self.x_l = x_l # x lower limit
         self.x_u = x_u # x upper limit
         self.y_l = y_l # y lower limit
@@ -48,8 +49,8 @@ class World(object):
                                       [-u1_max, -u2_max]]) # [-max linear accel, -max angular vel]
         
         # For pygame rendering
-        self.scale_x = 600 / (x_u - x_l)
-        self.scale_y = 600 / (y_u - y_l)
+        self.scale_x = 800 / (x_u - x_l)
+        self.scale_y = 800 / (y_u - y_l)
 
         self.initialized = False 
 
@@ -127,7 +128,7 @@ class World(object):
         self.evader.update_state(np.array([self.pursuer.position[0], self.pursuer.position[1]]))  
 
         self.pursuer_sprite.update([self.pursuer.position[0], self.pursuer.position[1]], self.pursuer.angle)
-        self.evader_sprite.update([self.evader.position[0], self.evader.position[1]], self.evader.angle)
+        self.evader_sprite.update([self.evader.position[0], self.evader.position[1]], self.evader.normalize_angle(self.evader.angle(self.evader.state)))
 
         reward, info = self.get_reward(dtm1)
 
@@ -145,14 +146,14 @@ class World(object):
 
         # Rendering 
         self.pursuer_sprite = Player(os.path.join('images', 'pursuersprite.png'), [self.pursuer.position[0], self.pursuer.position[1]], self.pursuer.angle, self.scale_x, self.scale_y, self.x_l, self.y_l)
-        self.evader_sprite = Player(os.path.join('images', 'evadersprite.png'), [self.evader.position[0], self.evader.position[1]], self.evader.angle, self.scale_x, self.scale_y, self.x_l, self.y_l)
+        self.evader_sprite = Player(os.path.join('images', 'evadersprite.png'), [self.evader.position[0], self.evader.position[1]], self.evader.normalize_angle(self.evader.angle(self.evader.state)), self.scale_x, self.scale_y, self.x_l, self.y_l)
         
         pygame.init()
         pygame.display.set_caption('Target Defense Game')
 
-        self.window_surface = pygame.display.set_mode((600, 600))
+        self.window_surface = pygame.display.set_mode((800, 800))
 
-        self.bg = pygame.Surface((600, 600))
+        self.bg = pygame.Surface((800, 800))
         self.bg.fill(pygame.Color('#c4e6fb'))
 
         self.all_sprites = pygame.sprite.Group()
@@ -162,11 +163,12 @@ class World(object):
 
     # Render 
     def render(self):
+        time.sleep(1)
         self.window_surface.blit(self.bg, (0, 0))
         radius = self.area_r * self.scale_x
 
         circle = pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
         pygame.draw.circle(circle, (255, 0, 0, 80), (radius, radius), radius)
-        self.window_surface.blit(circle, ((self.scale_x * (self.area_x - self.x_l) - radius), (600 - self.scale_y * (self.area_y - self.y_l)) - radius))
+        self.window_surface.blit(circle, ((self.scale_x * (self.area_x - self.x_l) - radius), (800 - self.scale_y * (self.area_y - self.y_l)) - radius))
         self.all_sprites.draw(self.window_surface)
         pygame.display.update()

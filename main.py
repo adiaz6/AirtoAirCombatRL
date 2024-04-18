@@ -7,3 +7,4 @@ if __name__ == "__main__":
     print(env.reset())
     while True:
         env.render()
+        env.step(0)

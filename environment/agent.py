@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 class Agent():
     pass
@@ -9,6 +10,10 @@ class Pursuer():
         self.v_max = v_max
         self.u1_max = u1_max
         self.u2_max = u2_max
+        self.x_u = x_u
+        self.x_l = x_l
+        self.y_u = y_u
+        self.y_l = y_l
 
         self.dt = dt # Time step
 
@@ -64,35 +69,35 @@ class Evader(Pursuer):
     def __init__(self, area_loc, state, v_min, v_max, u1_max, u2_max, dt, ka, kr):
         self.v_min = v_min
         self.v_max = v_max
-        self.u1_max = u1_max
-        self.u2_max = u2_max
+        self.u1_max = u1_max # mas linear accel
+        self.u2_max = u2_max # max angular velocity
 
         self.dt = dt
         self.state = state # [x, y, vx, vy]
 
-        self.ka = ka 
-        self.kr = kr
+        self.ka = ka # Attraction force constant
+        self.kr = kr # Repulsion force constant
 
         self.area_loc = area_loc
 
     def update_state(self, pursuer_loc):
         # Integration step
         s_dot = self.dynamics(pursuer_loc)
-        state = np.zeros(4) # [x, y, vx, vy]
-        old_angle = self.angle
+  
+        old_angle = self.angle(self.state)
 
         # Integrate dynamics here
         state = self.state + s_dot * self.dt
 
         # Limits on velocity
         v_mag = np.linalg.norm(state[2:])
-        new_angle = self.angle
+        new_angle = self.normalize_angle(self.angle(state))
 
         # Calculate angular velocity
         ang_v = (new_angle - old_angle) / self.dt
         ang_v_throttled = np.clip(ang_v, -self.u2_max, self.u2_max)
         ang_throttled = old_angle + ang_v_throttled * self.dt
-
+        print(np.rad2deg(ang_throttled))
         # Induce velocity limits
         v_throttled = np.clip(v_mag, self.v_min, self.v_max)
 
@@ -104,7 +109,7 @@ class Evader(Pursuer):
     def dynamics(self, pursuer_loc):
         # area_loc = [x_coord, y_coord] (location of target area)
         # pursuer_loc = [x_coord, y_coord] (current location of pursuer)
-        a_x, a_y = self.acceleration(self.area_loc, pursuer_loc)
+        a_x, a_y = self.acceleration(pursuer_loc)
         s_dot = np.zeros(4) # [x_dot, y_dot, vx_dot, vy_dot]
 
         s_dot[0] = self.state[2]
@@ -122,12 +127,12 @@ class Evader(Pursuer):
         dy = pursuer_loc[1] - self.state[1]  # Distance between the pursuer and the evader along the y-axis
 
         # Calculate attraction force
-        Fa_x = self.ka * hx
-        Fa_y = self.ka * hy
+        Fa_x = 0# self.ka / (hx + 0.001)
+        Fa_y = 10/(hy+0.001)#self.ka / (hy + 0.001)
 
         # Calculate repulsion force
-        Fr_x = -self.kr * dx
-        Fr_y = -self.kr * dy
+        Fr_x = -self.kr / (dx + 0.001)
+        Fr_y = -self.kr / (dy + 0.001)
 
         # Calculate acceleration
         a_x = Fa_x + Fr_x
@@ -135,9 +140,9 @@ class Evader(Pursuer):
 
         # Limit acceleration
         magnitude = np.sqrt(a_x**2 + a_y**2)
-        if magnitude > self.a_max:
-            a_x *= self.a_max / magnitude
-            a_y *= self.a_max / magnitude
+        if magnitude > self.u1_max:
+            a_x *= self.u1_max / magnitude
+            a_y *= self.u1_max / magnitude
 
         return np.array([a_x, a_y])
     
@@ -145,8 +150,10 @@ class Evader(Pursuer):
     def position(self):
         return self.state[0], self.state[1]
 
-    @property
-    def angle(self):
-        return np.degrees(np.arctan2(self.state[3], self.state[2]))
-        
+    def angle(self, state):
+        return np.arctan2(state[3], state[2])    
+
+    @staticmethod
+    def normalize_angle(theta):
+        return (theta + np.pi) % (2 * np.pi) - np.pi 
         
