@@ -56,6 +56,10 @@ class World(object):
 
         self.repulsion_radius = repulsion_radius
 
+        # State and action dims
+        self.state_dims = 8
+        self.action_dims = len(self.action_space)
+
     # Distance between pursuer and evader
     @property
     def distance_pe(self):
