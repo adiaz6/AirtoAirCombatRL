@@ -66,7 +66,7 @@ class Pursuer():
         return self.state[3]
     
 class Evader(Pursuer):
-    def __init__(self, area_loc, state, v_min, v_max, u1_max, u2_max, dt, ka, kr):
+    def __init__(self, area_loc, state, v_min, v_max, u1_max, u2_max, dt, ka, kr, repulsion_radius):
         self.v_min = v_min
         self.v_max = v_max
         self.u1_max = u1_max # mas linear accel
@@ -80,6 +80,8 @@ class Evader(Pursuer):
 
         self.area_loc = area_loc
 
+        self.repulsion_radius = repulsion_radius # evader will not evade when pursuer is beyond this radius
+
     def update_state(self, pursuer_loc):
         # Integration step
         s_dot = self.dynamics(pursuer_loc)
@@ -91,13 +93,14 @@ class Evader(Pursuer):
 
         # Limits on velocity
         v_mag = np.linalg.norm(state[2:])
-        new_angle = self.normalize_angle(self.angle(state))
+        new_angle = self.angle(state)
 
         # Calculate angular velocity
         ang_v = (new_angle - old_angle) / self.dt
         ang_v_throttled = np.clip(ang_v, -self.u2_max, self.u2_max)
         ang_throttled = old_angle + ang_v_throttled * self.dt
         print(np.rad2deg(ang_throttled))
+
         # Induce velocity limits
         v_throttled = np.clip(v_mag, self.v_min, self.v_max)
 
@@ -126,23 +129,34 @@ class Evader(Pursuer):
         dx = pursuer_loc[0] - self.state[0]  # Distance between the pursuer and the evader along the x-axis
         dy = pursuer_loc[1] - self.state[1]  # Distance between the pursuer and the evader along the y-axis
 
+        # Calculate angle to target and to pursuer
+        angle2target = np.arctan2(hy, hx)
+        angle2p = np.arctan2(dy, dx)
+
         # Calculate attraction force
-        Fa_x = 0# self.ka / (hx + 0.001)
-        Fa_y = 10/(hy+0.001)#self.ka / (hy + 0.001)
+        Fa = self.ka / np.sqrt(hx ** 2 + hy ** 2)
+        Fa_x = Fa * np.cos(angle2target)
+        Fa_y = Fa * np.sin(angle2target)
 
         # Calculate repulsion force
-        Fr_x = -self.kr / (dx + 0.001)
-        Fr_y = -self.kr / (dy + 0.001)
+        if np.sqrt(dx ** 2 + dy ** 2) >= self.repulsion_radius:
+            Fr_x = 0.0
+            Fr_y = 0.0
+        else:
+            Fr = -self.kr / np.sqrt(dx ** 2 + dy ** 2)
+            Fr_x = Fr * np.cos(angle2p)
+            Fr_y = Fr * np.sin(angle2p)
 
         # Calculate acceleration
         a_x = Fa_x + Fr_x
         a_y = Fa_y + Fr_y
 
         # Limit acceleration
+        accel_ang = np.arctan2(a_y, a_x)
         magnitude = np.sqrt(a_x**2 + a_y**2)
-        if magnitude > self.u1_max:
-            a_x *= self.u1_max / magnitude
-            a_y *= self.u1_max / magnitude
+        accel = np.clip(magnitude, -self.u1_max, self.u1_max)
+        a_x = accel * np.cos(accel_ang)
+        a_y = accel * np.sin(accel_ang)
 
         return np.array([a_x, a_y])
     

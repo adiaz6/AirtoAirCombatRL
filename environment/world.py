@@ -10,7 +10,7 @@ class World(object):
     def __init__(self,
                  vp_min=0, vp_max=1.2, u1_max=0.3, u2_max=0.8, 
                  ve_min=0, ve_max=1.2, ae_max=0.3, ave_max=0.8,
-                 x_l=0, x_u=10, y_l=0, y_u=10, d=0.3, dt=0.1, k=0.1, ka=0.1, kr=0):
+                 x_l=0, x_u=10, y_l=0, y_u=10, d=0.3, dt=0.1, k=0.1, ka=1, kr=0.1, repulsion_radius=2):
         self.x_l = x_l # x lower limit
         self.x_u = x_u # x upper limit
         self.y_l = y_l # y lower limit
@@ -53,6 +53,8 @@ class World(object):
         self.scale_y = 800 / (y_u - y_l)
 
         self.initialized = False 
+
+        self.repulsion_radius = repulsion_radius
 
     # Distance between pursuer and evader
     @property
@@ -128,7 +130,7 @@ class World(object):
         self.evader.update_state(np.array([self.pursuer.position[0], self.pursuer.position[1]]))  
 
         self.pursuer_sprite.update([self.pursuer.position[0], self.pursuer.position[1]], self.pursuer.angle)
-        self.evader_sprite.update([self.evader.position[0], self.evader.position[1]], self.evader.normalize_angle(self.evader.angle(self.evader.state)))
+        self.evader_sprite.update([self.evader.position[0], self.evader.position[1]], self.evader.angle(self.evader.state))
 
         reward, info = self.get_reward(dtm1)
 
@@ -142,8 +144,8 @@ class World(object):
         evader_state = [self.x_l + (self.x_u - self.x_l)/10, self.y_u - (self.y_u - self.y_l)/10, 0.0, 0.0]
 
         self.pursuer = Pursuer(pursuer_state, self.x_u, self.x_l, self.y_u, self.y_l, self.vp_min, self.vp_max, self.u1_max, self.u2_max, self.dt)
-        self.evader = Evader(np.array([self.area_x, self.area_y]), evader_state, self.ve_min, self.ve_max, self.ae_max, self.ave_max, self.dt, self.ka, self.kr)
-
+        self.evader = Evader(np.array([self.area_x, self.area_y]), evader_state, self.ve_min, self.ve_max, self.ae_max, self.ave_max, self.dt, self.ka, self.kr, self.repulsion_radius)
+       
         # Rendering 
         self.pursuer_sprite = Player(os.path.join('images', 'pursuersprite.png'), [self.pursuer.position[0], self.pursuer.position[1]], self.pursuer.angle, self.scale_x, self.scale_y, self.x_l, self.y_l)
         self.evader_sprite = Player(os.path.join('images', 'evadersprite.png'), [self.evader.position[0], self.evader.position[1]], self.evader.normalize_angle(self.evader.angle(self.evader.state)), self.scale_x, self.scale_y, self.x_l, self.y_l)
@@ -163,7 +165,7 @@ class World(object):
 
     # Render 
     def render(self):
-        time.sleep(1)
+        time.sleep(0.1)
         self.window_surface.blit(self.bg, (0, 0))
         radius = self.area_r * self.scale_x
 

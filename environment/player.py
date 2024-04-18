@@ -9,8 +9,9 @@ class Player(pygame.sprite.Sprite):
 
         image = pygame.image.load(image_path)
 
-        self.image = pygame.transform.scale(image, (50, 33))
-        self.image = pygame.transform.rotate(self.image, np.rad2deg(angle))
+        self.og_image = pygame.transform.scale(image, (50, 33))
+        
+        self.image = self.og_image
         self.rect = self.image.get_rect()
         self.position = position
         self.x_scale = x_scale
@@ -19,6 +20,7 @@ class Player(pygame.sprite.Sprite):
         self.ymin = ymin
         x, y = self.scaled_pos
         self.rect.center = (x, y)
+        self.angle = angle
 
     @property
     def scaled_pos(self):
@@ -28,7 +30,7 @@ class Player(pygame.sprite.Sprite):
         return scaled_x, scaled_y
 
     def update(self, position, angle):
-        self.image = pygame.transform.rotate(self.image, np.rad2deg(angle))
+        self.image = pygame.transform.rotate(self.og_image, np.rad2deg(angle))
         self.position = position
         scaled_x, scaled_y = self.scaled_pos
         self.rect.center = (scaled_x, scaled_y)

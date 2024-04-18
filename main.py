@@ -5,6 +5,8 @@ from environment.world import World
 if __name__ == "__main__":
     env = World()
     print(env.reset())
-    while True:
+    is_terminal = False
+
+    while not is_terminal:
         env.render()
-        env.step(0)
+        state, reward, is_terminal, info = env.step(0)
