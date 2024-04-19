@@ -99,7 +99,6 @@ class Evader(Pursuer):
         ang_v = (new_angle - old_angle) / self.dt
         ang_v_throttled = np.clip(ang_v, -self.u2_max, self.u2_max)
         ang_throttled = old_angle + ang_v_throttled * self.dt
-        print(np.rad2deg(ang_throttled))
 
         # Induce velocity limits
         v_throttled = np.clip(v_mag, self.v_min, self.v_max)
