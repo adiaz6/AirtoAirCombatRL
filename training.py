@@ -1,13 +1,12 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from environment.world import World
-from collections import deque
 from dqn2 import dqn
+import torch
 
 def main():
     env = World()    
-
-    dqn(env)
+    model = dqn(env)
+    torch.save(model.state_dict(), 'model.pt')
 
 if __name__ == "__main__":
     main()

@@ -4,6 +4,10 @@ from collections import deque, namedtuple
 import random
 import math
 from itertools import count
+import matplotlib.pyplot as plt
+import vidmaker
+import pygame
+
 
 # https://github.com/pytorch/tutorials/blob/main/intermediate_source/reinforcement_q_learning.py
 
@@ -28,9 +32,9 @@ class DQN(torch.nn.Module):
                  lr=1e-4 # learning rate
                  ):
         super(DQN, self).__init__()
-        self.layer1 = torch.nn.Linear(n_observations, 128)
-        self.layer2 = torch.nn.Linear(128, 128)
-        self.layer3 = torch.nn.Linear(128, n_actions)
+        self.layer1 = torch.nn.Linear(n_observations, 256)
+        self.layer2 = torch.nn.Linear(256, 256)
+        self.layer3 = torch.nn.Linear(256, n_actions)
 
         self.optimizer = torch.optim.AdamW(self.parameters(), lr=lr, amsgrad=True)
 
@@ -132,7 +136,6 @@ class EpsilonGreedyPolicy:
         else:
             return torch.tensor([[random.randint(0, self.n_actions - 1)]], device=self.device, dtype=torch.long)
 
-
 def dqn(env, 
         eps_start=0.9,  # start value for epsilon
         eps_end=0.05,   # end value for epsilon
@@ -161,17 +164,43 @@ def dqn(env,
     Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
     memory = ReplayMemory(N)
 
+    rewards = deque() # Save average rewards
+    termination_condition = {"evader succeeds": 0,
+                             "pursuer succeeds": 0,
+                             "evader cornered": 0} # Save termination conditions for each episode
+
     for i_episode in range(episodes):
         # Initialize the environment and get its state
         state = env.reset()
+        ep_state = deque()
+        ep_state.append(np.array([state[0], state[1], state[4], state[5]]))
+
+        state = env.normalize(state)
+
         state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
+        ep_reward = deque()
+        if i_episode % 100 == 0:
+            video = vidmaker.Video(f"./figures/videos/episode_{i_episode}.mp4", late_export=True)
 
         for t in count():
+            env.render()
+
+            if i_episode % 100 == 0:
+                video.update(pygame.surfarray.pixels3d(env.window_surface).swapaxes(0, 1), inverted=False) # THIS LINE
+
+
             action = policy.select_action(state, policy_net)
             observation, reward, done, info = env.step(action.item())
+
+            ep_state.append(np.array([observation[0], observation[1], observation[4], observation[5]]))
+            ep_reward.append(reward)
+
+            observation = env.normalize(observation)
+
             reward = torch.tensor([reward], device=device)
 
             if done:
+                termination_condition[info] += 1
                 next_state = None
             else:
                 next_state = torch.tensor(observation, dtype=torch.float32, device=device).unsqueeze(0)
@@ -198,9 +227,52 @@ def dqn(env,
             if done:
                 break
 
-    # Data to save 
-    """
-    rewards = deque() # Save rewards for each episode
-    states = deque() # Save states for each episode
-    termination_condition = deque() # Save termination conditions for each episode
-    """
+        if i_episode % 100 == 0:
+            video.export(verbose=True)
+
+            # Plot episode rewards
+            plt.figure()
+            plt.plot(env.dt * np.arange(len(ep_reward)), ep_reward)
+            plt.xlabel("Time")
+            plt.ylabel("Reward")
+            plt.title(f"Rewards for Episode {i_episode}")
+            plt.savefig(f'./figures/episode_rewards/episode_{i_episode}.png')
+
+            # Plot episode states
+            plt.figure()
+            plt.plot(np.array([st[0] for st in ep_state]), np.array([st[1] for st in ep_state]), label="Pursuer")
+            plt.plot(np.array([st[2] for st in ep_state]), np.array([st[3] for st in ep_state]), label="Evader")
+            plt.xlabel("x (m)")
+            plt.ylabel("y (m)")
+            plt.title(f"Pursuer and Evader Trajectories for Episode {i_episode}")
+            plt.legend()
+            plt.xlim((env.x_l, env.x_u))
+            plt.ylim((env.y_l, env.y_u))
+            plt.savefig(f"./figures/trajectories/episode_{i_episode}.png")
+
+        rewards.append(np.mean(ep_reward))
+
+    # Plot total rewards
+    plt.figure()
+    plt.plot(episodes, rewards)
+    plt.xlabel("Episode")
+    plt.ylabel("Reward")
+    plt.title(f"Average Rewards")
+    plt.savefig(f'./figures/average_rewards.png')
+
+    # Plot termination conditions
+    plt.figure()
+    termination_condition["Loss"] = termination_condition["evader succeeds"]
+    termination_condition["Win"] = termination_condition["pursuer succeeds"]
+    termination_condition["Technical Win"] = termination_condition["evader cornered"]
+
+    del termination_condition["evader succeeds"]
+    del termination_condition["evader cornered"]
+    del termination_condition["pursuer succeeds"]
+
+    plt.bar(*zip(*termination_condition.items()))
+    plt.xlabel("Termination Condition")
+    plt.ylabel("Frequency")
+    plt.savefig(f'./figures/term_conditions.png')
+
+    return target_net

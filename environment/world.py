@@ -9,8 +9,9 @@ import time
 class World(object):
     def __init__(self,
                  vp_min=0, vp_max=1.2, u1_max=0.3, u2_max=0.8, 
-                 ve_min=0, ve_max=1.2, ae_max=0.3, ave_max=0.8,
-                 x_l=0, x_u=10, y_l=0, y_u=10, d=0.3, dt=0.1, k=0.1, ka=1, kr=0.1, repulsion_radius=2):
+                 ve_min=0, ve_max=1.0, ae_max=0.3, ave_max=0.8,
+                 x_l=0, x_u=10, y_l=0, y_u=10, d=0.3, dt=1., 
+                 k=0.1, ka=1., kr=0.5, repulsion_radius=1.5):
         self.x_l = x_l # x lower limit
         self.x_u = x_u # x upper limit
         self.y_l = y_l # y lower limit
@@ -178,3 +179,11 @@ class World(object):
         self.window_surface.blit(circle, ((self.scale_x * (self.area_x - self.x_l) - radius), (800 - self.scale_y * (self.area_y - self.y_l)) - radius))
         self.all_sprites.draw(self.window_surface)
         pygame.display.update()
+
+
+    # Normalizing function 
+    def normalize(self, state):
+        min_val = np.array([self.x_l, self.y_l, self.vp_min, -np.pi/2, self.x_l, self.y_l, self.ve_min, self.ve_min, 0])
+        max_val = np.array([self.x_u, self.y_u, self.vp_max, np.pi/2, self.x_u, self.y_u, self.ve_max, self.ve_max, max(self.x_u - self.x_l, self.y_u - self.y_l)])
+
+        return (state - min_val) / (max_val - min_val)
