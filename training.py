@@ -1,10 +1,10 @@
 import numpy as np
 from environment.world import World
-from dqn2 import dqn
+from dqn import dqn
 import torch
 
 def main():
-    env = World()    
+    env = World()  
     model = dqn(env)
     torch.save(model.state_dict(), 'model.pt')
 

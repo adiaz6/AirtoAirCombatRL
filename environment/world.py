@@ -5,13 +5,14 @@ from environment.player import Player
 import os
 import pygame
 import time
+import random
 
 class World(object):
     def __init__(self,
                  vp_min=0, vp_max=1.2, u1_max=0.3, u2_max=0.8, 
-                 ve_min=0, ve_max=1.0, ae_max=0.3, ave_max=0.8,
-                 x_l=0, x_u=10, y_l=0, y_u=10, d=0.3, dt=1., 
-                 k=0.1, ka=1., kr=0.5, repulsion_radius=1.5):
+                 ve_min=0, ve_max=1.0, ae_max=0.3, ave_max=1.,
+                 x_l=0, x_u=10, y_l=0, y_u=10, d=0.3, dt=0.05, 
+                 k=0.5, ka=1., kr=0.25, repulsion_radius=2.):
         self.x_l = x_l # x lower limit
         self.x_u = x_u # x upper limit
         self.y_l = y_l # y lower limit
@@ -23,7 +24,7 @@ class World(object):
 
         self.d = d # capture distance
 
-        self.k = k
+        self.k = k   # reward constant
         self.ka = ka # distance reward scaling factor
         self.kr = kr
 
@@ -145,8 +146,22 @@ class World(object):
     def reset(self):
         self.initialized = True
 
-        pursuer_state = [self.x_l + (self.x_u - self.x_l)/10, self.y_l + (self.y_u - self.y_l)/10, 0.0, 0.0]
-        evader_state = [self.x_l + (self.x_u - self.x_l)/10, self.y_u - (self.y_u - self.y_l)/10, 0.0, 0.0]
+        pursuer_x = random.uniform(self.x_l, (self.x_u - self.x_l) / 4)
+        evader_x = random.uniform(self.x_l, (self.x_u - self.x_l) / 4)
+
+        pursuer_y = random.uniform(self.y_u - (self.y_u - self.y_l) / 4, self.y_u) # Between 5 and 10
+        evader_y = random.uniform(self.y_l, self.y_l + (self.y_u - self.y_l) / 5) # Between 0 and 2
+
+        pursuer_angle = random.uniform(-np.pi/2, np.pi/2)
+        evader_angle = random.uniform(-np.pi/2, np.pi/2)
+
+        pursuer_v = random.uniform(self.vp_min, 0.1 * self.vp_max) 
+        evader_v = random.uniform(self.ve_min, 0.1 * self.ve_max)
+        
+        pursuer_state = [pursuer_x, pursuer_y, pursuer_v, pursuer_angle]
+        evader_state = [evader_x, evader_y, evader_v * np.cos(evader_angle), evader_v * np.sin(evader_angle)]
+        #pursuer_state = [self.x_l + (self.x_u - self.x_l)/10, self.y_l + (self.y_u - self.y_l)/10, 0.0, 0.0]
+        #evader_state = [self.x_l + (self.x_u - self.x_l)/10, self.y_u - (self.y_u - self.y_l)/10, 0.0, 0.0]
 
         self.pursuer = Pursuer(pursuer_state, self.x_u, self.x_l, self.y_u, self.y_l, self.vp_min, self.vp_max, self.u1_max, self.u2_max, self.dt)
         self.evader = Evader(np.array([self.area_x, self.area_y]), evader_state, self.ve_min, self.ve_max, self.ae_max, self.ave_max, self.dt, self.ka, self.kr, self.repulsion_radius)
@@ -170,7 +185,7 @@ class World(object):
 
     # Render 
     def render(self):
-        time.sleep(0.1)
+        time.sleep(0.)
         self.window_surface.blit(self.bg, (0, 0))
         radius = self.area_r * self.scale_x
 
