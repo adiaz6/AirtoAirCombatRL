@@ -12,7 +12,8 @@ class World(object):
                  vp_min=0, vp_max=1.2, u1_max=0.3, u2_max=0.8, 
                  ve_min=0, ve_max=1.0, ae_max=0.3, ave_max=1.,
                  x_l=0, x_u=10, y_l=0, y_u=10, d=0.3, dt=0.05, 
-                 k=0.5, ka=1., kr=0.25, repulsion_radius=2.):
+                 k1=0.5, k2=0.75, ka=1., kr=0.2, repulsion_radius=1.5,
+                 continous_action=False):
         self.x_l = x_l # x lower limit
         self.x_u = x_u # x upper limit
         self.y_l = y_l # y lower limit
@@ -24,7 +25,8 @@ class World(object):
 
         self.d = d # capture distance
 
-        self.k = k   # reward constant
+        self.k1 = k1   # reward constant
+        self.k2 = k2
         self.ka = ka # distance reward scaling factor
         self.kr = kr
 
@@ -61,6 +63,9 @@ class World(object):
         # State and action dims
         self.state_dims = 8
         self.action_dims = len(self.action_space)
+
+        # Use continous action or discrete action
+        self.continuous_action = continous_action
 
     # Distance between pursuer and evader
     @property
@@ -119,20 +124,25 @@ class World(object):
         elif self.pursuer_succeeded:
             return 10, "pursuer succeeds"
         elif self.evader_cornered:
-            return 5, "evader cornered"
+            return 0, "evader cornered"
 
         # d_tm1: previous distance between both agents
         # d_t: current distance between both agents        
-        return self.k * (dtm1 - self.distance_pe), None
+        return self.k1 * (dtm1 - self.distance_pe) + self.k2 / (self.distance_pe + 1e-3), None
     
     # Take a step according to some action
     # Return new_state, reward, done, info (None)
     def step(self, action):
         if not self.initialized:
             raise ValueError("Environment not initialized. Call reset() before calling step().")
+        
+        if self.continuous_action:
+            action_val = action
+        else:
+            action_val = self.action_space[action]
                              
         dtm1 = self.distance_pe
-        self.pursuer.update_state(self.action_space[action])
+        self.pursuer.update_state(action_val)
         self.evader.update_state(np.array([self.pursuer.position[0], self.pursuer.position[1]]))  
 
         self.pursuer_sprite.update([self.pursuer.position[0], self.pursuer.position[1]], self.pursuer.angle)
@@ -146,11 +156,11 @@ class World(object):
     def reset(self):
         self.initialized = True
 
-        pursuer_x = random.uniform(self.x_l, (self.x_u - self.x_l) / 4)
-        evader_x = random.uniform(self.x_l, (self.x_u - self.x_l) / 4)
+        pursuer_x = random.uniform(self.x_l, (self.x_u - self.x_l) / 3)
+        evader_x = random.uniform(self.x_l, (self.x_u - self.x_l) / 3)
 
-        pursuer_y = random.uniform(self.y_u - (self.y_u - self.y_l) / 4, self.y_u) # Between 5 and 10
-        evader_y = random.uniform(self.y_l, self.y_l + (self.y_u - self.y_l) / 5) # Between 0 and 2
+        pursuer_y = random.uniform(self.y_u - (self.y_u - self.y_l) / 3, self.y_u) # Between 5 and 10
+        evader_y = random.uniform(self.y_l, self.y_l + (self.y_u - self.y_l) / 3) # Between 0 and 2
 
         pursuer_angle = random.uniform(-np.pi/2, np.pi/2)
         evader_angle = random.uniform(-np.pi/2, np.pi/2)
@@ -194,7 +204,6 @@ class World(object):
         self.window_surface.blit(circle, ((self.scale_x * (self.area_x - self.x_l) - radius), (800 - self.scale_y * (self.area_y - self.y_l)) - radius))
         self.all_sprites.draw(self.window_surface)
         pygame.display.update()
-
 
     # Normalizing function 
     def normalize(self, state):

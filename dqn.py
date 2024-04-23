@@ -35,7 +35,8 @@ class DQN(torch.nn.Module):
         self.layer1 = torch.nn.Linear(n_observations, 256)
         self.layer2 = torch.nn.Linear(256, 256)
         self.layer3 = torch.nn.Linear(256, 256)
-        self.layer4 = torch.nn.Linear(256, n_actions)
+        self.layer4 = torch.nn.Linear(256, 256)
+        self.layer5 = torch.nn.Linear(256, n_actions)
 
         self.optimizer = torch.optim.AdamW(self.parameters(), lr=lr, amsgrad=True)
 
@@ -45,7 +46,8 @@ class DQN(torch.nn.Module):
         x = torch.nn.functional.relu(self.layer1(x))
         x = torch.nn.functional.relu(self.layer2(x))
         x = torch.nn.functional.relu(self.layer3(x))
-        return self.layer4(x)
+        x = torch.nn.functional.relu(self.layer4(x))
+        return self.layer5(x)
     
     def optimize_model(self, 
                        memory,  # Replay memory 
@@ -140,9 +142,9 @@ class EpsilonGreedyPolicy:
 
 def dqn(env, 
         eps_start=0.9,  # start value for epsilon
-        eps_end=0.05,   # end value for epsilon
+        eps_end=0.1,   # end value for epsilon
         eps_decay=1000, # decay rate for epsilon-greedy
-        episodes=10000, # number of episodes
+        episodes=50000, # number of episodes
         gamma=0.99, # discount factor
         N=10000,   # Replay memory max size,
         tau=0.005, # Update rate for target network
@@ -184,13 +186,13 @@ def dqn(env,
         state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
         ep_reward = 0
 
-        if i_episode % 100 == 0:
+        if i_episode % (episodes // 200) == 0 or i_episode == episodes - 1:
             video = vidmaker.Video(f"./figures/videos/episode_{i_episode}.mp4", late_export=True)
 
         for t in count():
             env.render()
 
-            if i_episode % 100 == 0:
+            if i_episode % (episodes // 200) == 0 or i_episode == episodes - 1:
                 video.update(pygame.surfarray.pixels3d(env.window_surface).swapaxes(0, 1), inverted=False) # THIS LINE
 
             action = policy.select_action(state, policy_net)
@@ -239,13 +241,16 @@ def dqn(env,
             if done:
                 break
 
-        if i_episode % 100 == 0:
+        if i_episode % (episodes // 200) == 0 or i_episode == episodes - 1:
             video.export(verbose=True)
 
             # Plot episode states
-            plt.figure()
-            plt.plot(np.array([st[0] for st in ep_state]), np.array([st[1] for st in ep_state]), label="Pursuer")
-            plt.plot(np.array([st[2] for st in ep_state]), np.array([st[3] for st in ep_state]), label="Evader")
+            fig, axes = plt.subplots()
+            colored_circle = plt.Circle((env.area_x, env.area_y), env.area_r, color='#ed7777', label="Target area")
+            axes.set_aspect(1)
+            axes.add_artist(colored_circle)
+            axes.plot(np.array([st[0] for st in ep_state]), np.array([st[1] for st in ep_state]), label="Pursuer")
+            axes.plot(np.array([st[2] for st in ep_state]), np.array([st[3] for st in ep_state]), label="Evader")
             plt.xlabel("x (m)")
             plt.ylabel("y (m)")
             plt.title(f"Pursuer and Evader Trajectories for Episode {i_episode}")
@@ -266,7 +271,7 @@ def dqn(env,
 
     # Plot termination conditions
     plt.figure()
-    plt.plot(range(episodes), capture_count, label="Win rate")
+    plt.plot(range(episodes), capture_rate, label="Win rate")
     plt.plot(range(episodes), chase_rate, label="Technical win rate")
     plt.plot(range(episodes), win_rate, label="Total success rate")
     plt.xlabel("Episode")
@@ -277,4 +282,5 @@ def dqn(env,
     np.save('./data/rewards.npy', rewards)
     np.save('./data/chase_rate.npy', chase_rate)
     np.save('./data/capture_rate.npy', capture_rate)
+
     return target_net
