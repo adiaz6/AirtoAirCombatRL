@@ -12,7 +12,7 @@ class World(object):
                  vp_min=0, vp_max=1.2, u1_max=0.3, u2_max=0.8, 
                  ve_min=0, ve_max=1.0, ae_max=0.3, ave_max=1.,
                  x_l=0, x_u=10, y_l=0, y_u=10, d=0.3, dt=0.05, 
-                 k1=0.5, k2=0.75, ka=1., kr=0.2, repulsion_radius=1.5,
+                 k1=0.5, k2=0.6, ka=1., kr=0.2, repulsion_radius=1.5,
                  continous_action=False):
         self.x_l = x_l # x lower limit
         self.x_u = x_u # x upper limit
@@ -61,7 +61,7 @@ class World(object):
         self.repulsion_radius = repulsion_radius
 
         # State and action dims
-        self.state_dims = 8
+        self.state_dims = 9
         self.action_dims = len(self.action_space)
 
         # Use continous action or discrete action
@@ -128,7 +128,8 @@ class World(object):
 
         # d_tm1: previous distance between both agents
         # d_t: current distance between both agents        
-        return self.k1 * (dtm1 - self.distance_pe) + self.k2 / (self.distance_pe + 1e-3), None
+        return self.k1 * (dtm1 - self.distance_pe) + self.k2 / (self.distance_pe - self.distance_et + 1e-3), None
+        #return self.k1 * (dtm1 - self.distance_pe) + self.k2 / (self.distance_pe + 1e-3), None
     
     # Take a step according to some action
     # Return new_state, reward, done, info (None)
@@ -195,7 +196,7 @@ class World(object):
 
     # Render 
     def render(self):
-        time.sleep(0.)
+        time.sleep(0.0)
         self.window_surface.blit(self.bg, (0, 0))
         radius = self.area_r * self.scale_x
 

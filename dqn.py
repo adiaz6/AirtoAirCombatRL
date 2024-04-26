@@ -144,21 +144,28 @@ def dqn(env,
         eps_start=0.9,  # start value for epsilon
         eps_end=0.1,   # end value for epsilon
         eps_decay=1000, # decay rate for epsilon-greedy
-        episodes=50000, # number of episodes
+        episodes=20000, # number of episodes
         gamma=0.99, # discount factor
         N=10000,   # Replay memory max size,
         tau=0.005, # Update rate for target network
         batch_size=128, # minibatch size 
-        lr=1e-4 # learning rate
+        lr=1e-4, # learning rate
+        input_model=None # Input model if applicable
         ):
     # if GPU is to be used
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Get number of actions from gym action space
-    n_actions = env.state_dims
-    n_observations = env.action_dims
+    n_actions = env.action_dims
+    n_observations = env.state_dims
 
     policy_net = DQN(n_observations, n_actions).to(device)
+
+    if input_model is not None:
+        checkpoint = torch.load(input_model)
+        policy_net.load_state_dict(checkpoint['state_dict'])
+        policy_net.optimizer.load_state_dict(checkpoint['optimizer'])
+
     target_net = DQN(n_observations, n_actions).to(device)
     target_net.load_state_dict(policy_net.state_dict())
 
@@ -168,7 +175,8 @@ def dqn(env,
     Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
     memory = ReplayMemory(N)
 
-    rewards = deque() # Save average rewards
+    rewards = deque() # Save accumulated rewards
+    avg_rewards = deque() #Save average reward
     capture_count = 0 # Save termination conditions for each episode
     chase_count = 0
     capture_rate = deque()
@@ -176,6 +184,7 @@ def dqn(env,
     win_rate = deque()
 
     for i_episode in range(episodes):
+        print(f"Running episode {i_episode}")
         # Initialize the environment and get its state
         state = env.reset()
         ep_state = deque()
@@ -191,13 +200,11 @@ def dqn(env,
 
         for t in count():
             env.render()
-
             if i_episode % (episodes // 200) == 0 or i_episode == episodes - 1:
                 video.update(pygame.surfarray.pixels3d(env.window_surface).swapaxes(0, 1), inverted=False) # THIS LINE
 
             action = policy.select_action(state, policy_net)
             observation, reward, done, info = env.step(action.item())
-
             ep_state.append(np.array([observation[0], observation[1], observation[4], observation[5]]))
             ep_reward += (gamma ** t) * reward
 
@@ -260,6 +267,7 @@ def dqn(env,
             plt.savefig(f"./figures/trajectories/episode_{i_episode}.png")
 
         rewards.append(ep_reward)
+        avg_rewards.append(ep_reward / (t + 1))
 
     # Plot total rewards
     plt.figure()
@@ -269,18 +277,31 @@ def dqn(env,
     plt.title(f"Accumulated Rewards")
     plt.savefig(f'./figures/rewards.png')
 
-    # Plot termination conditions
+    # Plot avergae rewards
     plt.figure()
-    plt.plot(range(episodes), capture_rate, label="Win rate")
-    plt.plot(range(episodes), chase_rate, label="Technical win rate")
-    plt.plot(range(episodes), win_rate, label="Total success rate")
+    plt.plot(range(episodes), avg_rewards)
     plt.xlabel("Episode")
-    plt.ylabel("Success Rate")
-    plt.legend()
-    plt.title(f"Success Rate per Episode")
-    plt.savefig(f'./figures/success_rate.png')
-    np.save('./data/rewards.npy', rewards)
-    np.save('./data/chase_rate.npy', chase_rate)
-    np.save('./data/capture_rate.npy', capture_rate)
+    plt.ylabel("Average Reward per Time Step")
+    plt.title(f"Average Accumulated Reward per Time Step")
+    plt.savefig(f'./figures/avg_rewards.png')
 
-    return target_net
+    # Plot termination conditions
+    try:
+        plt.figure()
+        plt.plot(range(episodes), capture_rate, label="Win rate")
+        plt.plot(range(episodes), chase_rate, label="Technical win rate")
+        plt.plot(range(episodes), win_rate, label="Total success rate")
+        plt.xlabel("Episode")
+        plt.ylabel("Success Rate")
+        plt.legend()
+        plt.title(f"Success Rate per Episode")
+        plt.savefig(f'./figures/success_rate.png')
+        np.save('./data/rewards.npy', rewards)
+        np.save('./data/chase_rate.npy', chase_rate)
+        np.save('./data/capture_rate.npy', capture_rate)
+        np.save('./data/avg_rewards.npy', avg_rewards)
+    except:
+        print('Failed')
+
+    checkpoint = {'state_dict': policy_net.state_dict(), 'optimizer': policy_net.optimizer.state_dict()}
+    return checkpoint
