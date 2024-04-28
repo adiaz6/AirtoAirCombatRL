@@ -9,7 +9,7 @@ import vidmaker
 import pygame
 
 
-# https://github.com/pytorch/tutorials/blob/main/intermediate_source/reinforcement_q_learning.py
+# From https://github.com/pytorch/tutorials/blob/main/intermediate_source/reinforcement_q_learning.py
 
 class ReplayMemory:
     def __init__(self, capacity):
@@ -196,6 +196,7 @@ def dqn(env,
         ep_reward = 0
 
         if i_episode % (episodes // 200) == 0 or i_episode == episodes - 1:
+            
             video = vidmaker.Video(f"./figures/videos/episode_{i_episode}.mp4", late_export=True)
 
         for t in count():

@@ -6,7 +6,7 @@ import torch
 def main():
     env = World()  
     checkpoint = dqn(env)
-    torch.save(checkpoint, './model_phase1.pt')
+    torch.save(checkpoint, './model_baseline.pt')
 
     #checkpoint = dqn(env, input_model='./model_phase1.pt')
     #torch.save(checkpoint, './model_phase2.pt')

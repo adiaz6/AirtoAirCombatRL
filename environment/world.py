@@ -118,7 +118,7 @@ class World(object):
         return np.concatenate((self.p_state, self.e_state, np.array([self.distance_et])))
     
     # Get reward
-    def get_reward(self, dtm1):
+    def get_reward(self, dtm1, htm1):
         if self.evader_succeeded:
             return -10, "evader succeeds"
         elif self.pursuer_succeeded:
@@ -128,8 +128,10 @@ class World(object):
 
         # d_tm1: previous distance between both agents
         # d_t: current distance between both agents        
-        return self.k1 * (dtm1 - self.distance_pe) + self.k2 / (self.distance_pe - self.distance_et + 1e-3), None
+        return self.k1 * (dtm1 - self.distance_pe) + self.k2 / (self.distance_pe + 1e-3) - 0.8 * (self.distance_et - htm1), None
         #return self.k1 * (dtm1 - self.distance_pe) + self.k2 / (self.distance_pe + 1e-3), None
+        #return self.k1 * (dtm1 - self.distance_pe), None
+
     
     # Take a step according to some action
     # Return new_state, reward, done, info (None)
@@ -143,13 +145,14 @@ class World(object):
             action_val = self.action_space[action]
                              
         dtm1 = self.distance_pe
+        htm1 = self.distance_et
         self.pursuer.update_state(action_val)
         self.evader.update_state(np.array([self.pursuer.position[0], self.pursuer.position[1]]))  
 
         self.pursuer_sprite.update([self.pursuer.position[0], self.pursuer.position[1]], self.pursuer.angle)
         self.evader_sprite.update([self.evader.position[0], self.evader.position[1]], self.evader.angle(self.evader.state))
 
-        reward, info = self.get_reward(dtm1)
+        reward, info = self.get_reward(dtm1, htm1)
 
         return self.state, reward, self.is_terminal, info
     
