@@ -13,31 +13,37 @@ git clone https://github.com/adiaz6/PursuitEvaderNuclearBomberRL.git
 ```bash
 environment/
 ```
-: holds world, agent, and sprite models
+Holds world, agent, and sprite models
 
 ```bash
-dqn.py: DQN algorithm (from https://github.com/pytorch/tutorials/blob/main/intermediate_source/reinforcement_q_learning.py)
+dqn.py
 ```
+DQN algorithm (from https://github.com/pytorch/tutorials/blob/main/intermediate_source/reinforcement_q_learning.py)
 
 ```bash
-training.py: for training
+training.py
 ```
+For training
 
 ```bash
-comparison.py: for evaluation
+comparison.py
 ```
+For evaluation
 
 ```bash
-model_baseline.pt: trained policy with baseline reward
+model_baseline.pt
 ```
+Trained policy with baseline reward
 
 ```bash
-model_phase1.pt: trained policy with Phase I reward
+model_phase1.pt
 ```
+Trained policy with Phase I reward
 
 ```bash
-model_phase2.pt: trained policy with Phase II reward
+model_phase2.pt
 ```
+Trained policy with Phase II reward
 
 ## Usage
 ### Training
