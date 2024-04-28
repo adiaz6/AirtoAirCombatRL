@@ -7,6 +7,7 @@ from itertools import count
 import matplotlib.pyplot as plt
 import vidmaker
 import pygame
+import os
 
 
 # From https://github.com/pytorch/tutorials/blob/main/intermediate_source/reinforcement_q_learning.py
@@ -152,6 +153,13 @@ def dqn(env,
         lr=1e-4, # learning rate
         input_model=None # Input model if applicable
         ):
+    
+    os.makedirs('./figures/')
+    os.makedirs('./figures/videos')
+    os.makedirs('./figures/trajectories')
+    os.makedirs('./data/trajectories')
+
+
     # if GPU is to be used
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -302,7 +310,7 @@ def dqn(env,
         np.save('./data/capture_rate.npy', capture_rate)
         np.save('./data/avg_rewards.npy', avg_rewards)
     except:
-        print('Failed')
+        print('Failed to save data')
 
     checkpoint = {'state_dict': policy_net.state_dict(), 'optimizer': policy_net.optimizer.state_dict()}
     return checkpoint
