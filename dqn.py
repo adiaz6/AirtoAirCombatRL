@@ -154,10 +154,14 @@ def dqn(env,
         input_model=None # Input model if applicable
         ):
     
-    os.makedirs('./figures/')
-    os.makedirs('./figures/videos')
-    os.makedirs('./figures/trajectories')
-    os.makedirs('./data/trajectories')
+    if not os.path.isdir('./figures'):
+        os.makedirs('./figures/')
+    if not os.path.isdir('./figures/videos'):
+        os.makedirs('./figures/videos')
+    if not os.path.isdir('./figures/trajectories'):
+        os.makedirs('./figures/trajectories')
+    if not os.path.isdir('./data/trajectories'):
+        os.makedirs('./data/trajectories')
 
 
     # if GPU is to be used
