@@ -5,6 +5,7 @@ from dqn import dqn, DQN
 import torch
 import matplotlib.pyplot as plt
 import random
+import os
 from collections import deque
 from process_data import comparison_plots
 
@@ -75,6 +76,9 @@ if __name__ == "__main__":
     #np.save('./test_data/rewards_ph1.pkl', rewards1)
     #np.save('./test_data/rewards_ph2.pkl', rewards2)
     #np.save('./test_data/rewards_bl.pkl', rewards3)
+
+    if not os.path.isdir('./test_data/'):
+        os.makedirs('./test_data/')
     np.save('./test_data/success_ph1.npy', success1)
     np.save('./test_data/success_ph2.npy', success2)
     np.save('./test_data/success_bl.npy', success3)
