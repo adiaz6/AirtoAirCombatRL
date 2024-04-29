@@ -64,14 +64,14 @@ def dqn_policy(env, policy_path, num_trials):
     return rewards, success
 
 if __name__ == "__main__":
-    env = World()  
-    rewards1, success1 = dqn_policy(env, "model_phase1.pt", 10000)
+    env = World()
+    rewards1, success1 = dqn_policy(env, "model_phase1.pt", 1)
 
     env = World()
-    rewards2, success2 = dqn_policy(env, "model_phase2.pt", 10000)
+    rewards2, success2 = dqn_policy(env, "model_phase2.pt", 1)
 
     env = World()
-    rewards3, success3 = dqn_policy(env, "model_baseline.pt", 10000)
+    rewards3, success3 = dqn_policy(env, "model_baseline.pt", 1)
 
     #np.save('./test_data/rewards_ph1.pkl', rewards1)
     #np.save('./test_data/rewards_ph2.pkl', rewards2)

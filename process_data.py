@@ -91,6 +91,9 @@ def comparison_plots(r_phase1, r_phase2, r_phase3, success_ph1, success_ph2, suc
 
 def reward_plots(phase):
     # Generate training plots
+    if not os.path.isdir(f'./figures_{phase}'):
+        os.makedirs(f'./figures_{phase}')
+        
     rewards = np.load(f'data_{phase}/rewards.npy')
     cumsum_vec = np.cumsum(np.insert(rewards, 0, 0)) 
     ma_vec = (cumsum_vec[100:] - cumsum_vec[:-100]) / 100
