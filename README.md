@@ -5,7 +5,7 @@ Using DQN, the agent (pursuer) learns to defend a target area by intercepting or
 
 ## Installation
 ```bash
-git clone https://github.com/adiaz6/PursuitEvaderNuclearBomberRL.git
+git clone https://github.com/adiaz6/TargetGuardingRL.git
 ```
 
 ## Contents 
